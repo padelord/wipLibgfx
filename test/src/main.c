@@ -137,7 +137,7 @@ int		main(int ac, char **av)
 		printf("error while Init\n");
 		return (0);
 	}
-	if (!(win = SDL_CreateWindow("my Window", 0, 0, 1080, 720, 0)))
+	if (!(win = SDL_CreateWindow("Bob Rasowsky!!!", 0, 0, 1080, 720, 0)))
 	{
 		printf("error with window\n");
 		return (0);
@@ -148,21 +148,23 @@ int		main(int ac, char **av)
 		printf("Problem getting bob.bmp");
 	else
 	{
-//		printf("img size %dx%d\n", img->w, img->h);
+		//printf("img size %dx%d\n", img->w, img->h);
 		if ((win = SDL_CreateWindow("my Window", 0, 0, img->w, img->h, 0)))
 		{
 			wini = SDL_GetWindowSurface(win);
+		//	SDL_PollEvent(&event);
+			if (event.type == SDL_FIRSTEVENT)
+				printf("firstevent\n");
 			ft_fill(wini, 0x440000);
 			SDL_UpdateWindowSurface(win);
-			SDL_Delay(200);
 			SDL_BlitSurface(img, 0, wini, 0);
 			SDL_UpdateWindowSurface(win);
-			SDL_Delay(200);
+			SDL_Delay(1000);
 			SDL_DestroyWindow(win);
 		}
 		else
 			printf("error with window\n");
-		SDL_FreeSurface(img);
+		//SDL_FreeSurface(img);
 	}
 	if (!(win = SDL_CreateWindow("my window", 0, 0, 1080, 720, 0)))
 	{
@@ -178,6 +180,8 @@ int		main(int ac, char **av)
 	printf(" Scancode |  keysym  |   names  \n");
 	while (run)
 	{
+		ft_fill(wini, 0x440000);
+		SDL_BlitSurface(img, 0, wini, 0);
 		SDL_UpdateWindowSurface(win);
 		if (lockm)
 			SDL_WarpMouseInWindow(win, 540, 360);
@@ -200,6 +204,7 @@ int		main(int ac, char **av)
 				if ((int)(kb->keysym.scancode) == 41)
 				{
 //					SDL_ShowCursor(SDL_ENABLE);
+					SDL_FreeSurface(img);
 					SDL_DestroyWindow(win);
 					SDL_Quit();
 					run = 0;

@@ -26,6 +26,10 @@ LFLAGS	+=	-lft
 LFLAGS	+=	-lm
 LFLAGS	+=	$(shell sdl2-config --libs)
 
+ifeq ($(shell uname), Darwin)
+LFLAGS += -liconv  -Wl,-framework,CoreAudio -Wl,-framework,AudioToolbox -Wl,-framework,ForceFeedback -lobjc -Wl,-framework,CoreVideo -Wl,-framework,Cocoa -Wl,-framework,Carbon -Wl,-framework,IOKit
+endif
+
 CFLAGS	+=	$(addprefix -I,$(IDIR))
 CFLAGS	+=	$(shell sdl2-config --cflags)
 
