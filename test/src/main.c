@@ -2,341 +2,224 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <SDL2/SDL.h>
 #include "libft.h"
-#include "gfx.h"
-#include "mlx.h"
 
-typedef struct	s_mouse
+typedef unsigned int t_u32;
+
+t_u32	ft_abs(int n)
 {
-	int	x;
-	int	y;
-	t_vec2	pos;
-	t_texture	txt;
-}				t_mouse;
-
-typedef struct	s_win
-{
-	void		*ptr;
-	int			x;
-	int			y;
-}				t_win;
-
-typedef	struct	s_core
-{
-	void	*mlx;
-	t_win	win;
-	t_img	*img;
-	void	*param;
-	int		fps;
-	t_vec2	size;
-	t_vec2	hsize;
-	t_mouse	mouse;
-	void 	(*free_data)(void**);
-	void	*data;
-}				t_core;
-
-#define ST_GET 1
-#define ST_SET 2
-#define ST_DEL 4
-
-void delcore(t_core *core)
-{
-	mlx_mouse_show(core->mlx, core->win.ptr);
-	mlx_destroy_window(core->mlx, core->win.ptr);
+	return (n < 0 ? (t_u32)(-n) : (t_u32)n);
 }
 
-t_core	*st_core(int mod)
-{
-	static	t_core	core;
-
-	if (mod == ST_GET)
-		return (&core);
-	if (mod == ST_DEL)
-	{
-		delcore(&core);
-		return (0);
-	}
-	return (0);
-}
-
-t_core	*st_initcore(t_vec2 size, char *name)
-{
-	t_core	*core;
-
-	if (!((core = st_core(ST_GET)) && (core->mlx = mlx_init()) &&
-		(core->win.ptr = mlx_new_window(core->mlx, size.x, size.y, name))))
-		return (0);
-	if (!(core->img = init_image(core->mlx, size.x, size.y)))
-		return (0);
-	core->size = size;
-	core->hsize = core->size / 2;
-	core->mouse.pos = core->hsize;
-	return (core);
-}
-
-#define E_TIME 10000
-#include <sys/time.h>
-void full_img(t_img *img, t_u32 color)
-{
-	t_u32	*tab;
-	t_u32	size;
-
-	tab = img->data;
-	size = img->size.x * img->size.y;
-	while (size--)
-		*tab++ = color;
-}
-
-int	draw_curs(void *mlx, void *win, int x, int y)
+void	ft_fill(SDL_Surface *img, t_u32 color)
 {
 	int	i;
+	int	j;
+	int hx;
+	int hy;
+	int	dx;
+	int	dy;
 
+	hx = img->w / 2;
+	hy = img->h / 2;
 	i = -1;
-	while (++i < 20)
+	while (++i < img->h)
 	{
-		mlx_pixel_put(mlx, win, x + i, y, 0x00BB00);
-		mlx_pixel_put(mlx, win, x - i, y, 0x00BB00);
-		mlx_pixel_put(mlx, win, x, y + i, 0x00BB00);
-		mlx_pixel_put(mlx, win, x, y - i, 0x00BB00);
+		j = -1;
+		while (++j < img->w)
+		{
+			dx = ft_abs(i - hx);
+			dy = ft_abs(j - hy);
+			color = dx * dx + dy * dy;
+			((t_u32*)img->pixels)[i * img->w + j] = color;
+		}
 	}
-	return (0);
 }
 
-t_u32		ft_abs(int n)
+void	ft_bat()
 {
-	return ((n & 0x80000000) ? (t_u32) -n : n);
+	int secs, pct;
+
+	if (SDL_GetPowerInfo(&secs, &pct) == SDL_POWERSTATE_ON_BATTERY)
+	{
+		printf("La batterie prend cher: ");
+		if (secs == -1)
+			printf("(unknown time left)\n");
+		else
+			printf("(il reste %d minutes and %d secondes)\n", secs / 60, secs % 60);
+		if (pct == -1)
+			printf("(unknown percentage left)\n");
+		else
+			printf("(%d percent left)\n", pct);
+	}
 }
 
-#define BUT_DIST 100
-
-int		isnear(t_vec2 p1, t_vec2 p2)
+void	printwindowevent(SDL_Event *event)
 {
-	t_uvec2	d;
+	switch (event->window.event)
+	{
+		case SDL_WINDOWEVENT_SHOWN:
+			printf("Window %d shown\n", event->window.windowID);
+			break;
+		case SDL_WINDOWEVENT_HIDDEN:
+		printf("Window %d hidden\n", event->window.windowID);
+		break;
+		case SDL_WINDOWEVENT_EXPOSED:
+		printf("Window %d exposed\n", event->window.windowID);
+		break;
+		case SDL_WINDOWEVENT_MOVED:
+		printf("Window %d moved to %d,%d\n",
+				event->window.windowID, event->window.data1,
+				event->window.data2);
+		break;
+		case SDL_WINDOWEVENT_RESIZED:
+		printf("Window %d resized to %dx%d\n",
+				event->window.windowID, event->window.data1,
+				event->window.data2);
+		break;
+	case SDL_WINDOWEVENT_SIZE_CHANGED:
+		printf("Window %d size changed to %dx%d\n",
+				event->window.windowID, event->window.data1,
+				event->window.data2);
+		break;
+	case SDL_WINDOWEVENT_MINIMIZED:
+		printf("Window %d minimized\n", event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_MAXIMIZED:
+		printf("Window %d maximized\n", event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_RESTORED:
+		printf("Window %d restored\n", event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_ENTER:
+		printf("Mouse entered window %d\n",
+				event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_LEAVE:
+		printf("Mouse left window %d\n", event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_FOCUS_GAINED:
+		printf("Window %d gained keyboard focus\n",
+				event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_FOCUS_LOST:
+		printf("Window %d lost keyboard focus\n",
+				event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_CLOSE:
+		printf("Window %d closed\n", event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_TAKE_FOCUS:
+		printf("Window %d is offered a focus\n", event->window.windowID);
+		break;
+	case SDL_WINDOWEVENT_HIT_TEST:
+		printf("Window %d has a special hit test\n", event->window.windowID);
+		break;
+	default:
+		printf("Window %d got unknown event %d\n",
+				event->window.windowID, event->window.event);
+		break;
+	}
+}
 
-	d = (t_uvec2){ft_abs(p1.x - p2.x), ft_abs(p1.y - p2.y)};
-	printf("dist : %dx%d\n", d.x, d.y);
-	if (d.x > BUT_DIST || d.y > BUT_DIST)
+int		main(int ac, char **av)
+{
+	SDL_Window		*win;
+	SDL_Surface		*img;
+	SDL_Surface		*wini;
+	SDL_Event		event;
+
+	(void)av;
+	(void)ac;
+	if ((SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)))
+	{
+		printf("error while Init\n");
 		return (0);
-	if (d.x * d.x + d.y * d.y <= 10000)
+	}
+	if (!(win = SDL_CreateWindow("my Window", 0, 0, 1080, 720, 0)))
+	{
+		printf("error with window\n");
+		return (0);
+	}
+	SDL_Delay(200);
+	SDL_DestroyWindow(win);
+	if (!(img = SDL_LoadBMP("test/bob.bmp")))
+		printf("Problem getting bob.bmp");
+	else
+	{
+//		printf("img size %dx%d\n", img->w, img->h);
+		if ((win = SDL_CreateWindow("my Window", 0, 0, img->w, img->h, 0)))
+		{
+			wini = SDL_GetWindowSurface(win);
+			ft_fill(wini, 0x440000);
+			SDL_UpdateWindowSurface(win);
+			SDL_Delay(200);
+			SDL_BlitSurface(img, 0, wini, 0);
+			SDL_UpdateWindowSurface(win);
+			SDL_Delay(200);
+			SDL_DestroyWindow(win);
+		}
+		else
+			printf("error with window\n");
+		SDL_FreeSurface(img);
+	}
+	if (!(win = SDL_CreateWindow("my window", 0, 0, 1080, 720, 0)))
+	{
+		printf("error creating last window\n");
 		return (1);
-	return (0);
-}
-
-/*
-int	draw_curs(void *mlx, void *win, int x, int y)
-{
-	t_vec2	i;
-
-	i.x = x - 20;
-	i.y = y - 20;
-	while (i.x < x + 20)
+	}
+	SDL_KeyboardEvent *kb;
+	SDL_MouseMotionEvent *mouse;
+	int	run = 1;
+	wini = SDL_GetWindowSurface(win);
+//	SDL_ShowCursor(SDL_DISABLE);
+	int	lockm = 0;
+	printf(" Scancode |  keysym  |   names  \n");
+	while (run)
 	{
-		mlx_pixel_put(mlx, win, i.x++, y, 0xFFFFFF);
-		mlx_pixel_put(mlx, win, x, i.y++, 0xFFFFFF);
+		SDL_UpdateWindowSurface(win);
+		if (lockm)
+			SDL_WarpMouseInWindow(win, 540, 360);
+		while (SDL_PollEvent(&event))
+		{
+			if (lockm && event.type == SDL_MOUSEMOTION)
+			{
+//				printf("%dx%d\n", event.motion.x, event.motion.y);
+				mouse = (SDL_MouseMotionEvent*)&event;
+//				if (mouse->x != 540 && mouse->y != 360)
+//					printf("mouse moved in %dx%d\n", mouse->x - 540, mouse->y - 360);
+			}
+			if (event.type == SDL_KEYDOWN)
+			{
+				printf("%10d|%10d|\"%s\"/\"%s\"\n", event.key.keysym.scancode, event.key.keysym.sym, SDL_GetScancodeName(event.key.keysym.scancode), SDL_GetKeyName(event.key.keysym.sym));
+				//printf("scancode : %10d : %s\nkeysym   : %10d : %s\n", event.key.keysym.scancode, SDL_GetScancodeName(event.key.keysym.scancode), event.key.keysym.sym, SDL_GetKeyName(event.key.keysym.sym));
+				kb = (SDL_KeyboardEvent*)&event;
+//				if ((int)(kb->keysym.scancode) == 44)
+//					lockm = (lockm == 1 ? 0 : 1);
+				if ((int)(kb->keysym.scancode) == 41)
+				{
+//					SDL_ShowCursor(SDL_ENABLE);
+					SDL_DestroyWindow(win);
+					SDL_Quit();
+					run = 0;
+				}
+				//printf("scancode: %d\nkeysym: %d\nmod: %hu\n", kb->keysym.scancode, kb->keysym.sym, kb->keysym.mod);
+				//printf("key down\n");
+			}
+//			if (event.type == SDL_KEYUP)
+//				printf("key up\n");
+			if (event.type == SDL_WINDOWEVENT)
+			{
+				if (event.window.event == SDL_WINDOWEVENT_CLOSE)
+				{
+					SDL_DestroyWindow(win);
+					SDL_Quit();
+					run = 0;
+				}
+				//printwindowevent(&event);
+			}
+		}
+		SDL_Delay(100);
 	}
 }
-*/
-int	fx_loop(void *param)
-{
-	t_core		*e;
-	static long felapsed;
-	static long elapsed;
-	struct timeval f0, f1;
-	struct timeval t0, t1;
-
-	gettimeofday(&f0, 0);
-	gettimeofday(&t0, 0);
-	long waiting = ((elapsed < 16666) ? 16666 - elapsed : 0);
-	e = (t_core*)param;
-	//full_img(e->img, 0xFF0000);
-	mlx_put_image_to_window(e->mlx, e->win.ptr, e->img->ptr, 0, 0);
-
-	dprintf(1, "mouse:%d:%d\n",e->mouse.pos.x, e->mouse.pos.y);// e->mouse.x - e->hsize.x, e->mouse.y - e->hsize.y);
-	e->mouse.pos += (t_vec2){e->mouse.x, e->mouse.y} - e->hsize;
-	//mlx_mouse_move(e->mlx, e->win.ptr, e->hsize.x, e->hsize.y);
-	if (isnear(e->mouse.pos, e->hsize))
-		draw_curs(e->mlx, e->win.ptr, e->hsize.x, e->hsize.y);
-	else
-		draw_curs(e->mlx, e->win.ptr, e->mouse.pos.x, e->mouse.pos.y);
-	printf("last frame : %ld µs\n", felapsed);
-	gettimeofday(&t1, 0);
-	elapsed = (t1.tv_sec-t0.tv_sec)*1000000 + t1.tv_usec-t0.tv_usec;
-	usleep(waiting);
-	gettimeofday(&f1, 0);
-	felapsed = (f1.tv_sec-f0.tv_sec)*1000000 + f1.tv_usec-f0.tv_usec;
-	return (0);
-}
-
-int		fx_errno(int mod, int err)
-{
-	static int value = 0;
-
-	if (mod & ST_SET)
-		value = err;
-	if (mod & ST_GET)
-		return (value);
-	return (0);
-}
-
-int		fx_key_hook(int key, void *param)
-{
-	t_core *e;
-
-	e = (t_core *)param;
-	if (key == K_SPC)
-		mlx_mouse_move(e->mlx, e->win.ptr, e->hsize.x, e->hsize.y);
-	if (key == K_ESC)
-		exit((int)st_core(ST_DEL));
-	return (0);
-}
-
-int		fx_expose(void *param)
-{
-	t_core *e;
-
-	e = (t_core *)param;
-	(void)e;
-	dprintf(1, "Coucou\n");
-	return (0);
-}
-
-int		fx_close_hook(void *param)
-{
-	t_core	*e;
-
-	e = (t_core *)param;
-	delcore(e);
-	exit(0);
-	return (0);
-}
-
-int		fx_mouse_move(int x, int y, void *param)
-{
-	t_core	*e;
-
-	e = (t_core*)param;
-	e->mouse.x = x;
-	e->mouse.y = y;
-	if (x == e->hsize.x && y == e->hsize.y)
-		return (0);
-	mlx_mouse_move(e->mlx, e->win.ptr, e->hsize.x, e->hsize.y);
-	return (0);
-}
-
-void	fx_launch()
-{
-	t_core	*e;
-	int		x;
-	int		y;
-
-	e = (t_core*)st_core(ST_GET);
-	mlx_get_screen_size(e->mlx, &x, &y);
-	dprintf(1, "size of screen : %dx%d\n", x, y);
-	mlx_expose_hook(e->win.ptr, fx_expose, e);
-	mlx_key_hook(e->win.ptr, fx_key_hook, e);
-	mlx_hook(e->win.ptr, 6, (1U << 6), fx_mouse_move, e);
-	mlx_hook(e->win.ptr, 17, (1L << 17), fx_close_hook, e);
-	mlx_loop_hook(e->mlx, fx_loop, e);
-	//mlx_mouse_hide(e->mlx, e->win.ptr);
-	mlx_mouse_move(e->mlx, e->win.ptr, e->mouse.pos.x, e->mouse.pos.y);
-	mlx_loop(e->mlx);
-}
-
-int	vec_isequal(t_vec2 a, t_vec2 b)
-{
-	return (a.x == b.x && a.y == b.y);
-}
-
-int	vec_isupper(t_vec2 a, t_vec2 b)
-{
-	return (a.x > b.x && a.y > b.y);
-}
-
-int	vec_islower(t_vec2 a, t_vec2 b)
-{
-	return (a.x < b.x && a.y < b.y);
-}
-
-int	main(int ac, char **av)
-{
-	t_vec2	a;
-	t_vec2	b;
-
-	a = (t_vec2){1, 2};
-	b = (t_vec2){2, 3};
-	if (vec_islower(a, b))
-		dprintf(1,"C'est moins\n");
-	if (vec_isupper(a, b))
-		dprintf(1,"C'est plus\n");
-	if (vec_isequal(a, b))
-		dprintf(1,"C'est pareil\n");
-	if (st_initcore((t_vec2){1080, 720}, "blabla"))
-		fx_launch();
-	else
-		printf("error\n");
-	printf("%s\n", av[ac - 1]);
-	return (0);
-}
-/*
-#define SUPTIME 100
-
-int	ft_wischar(char *buffer, char c, int size)
-{
-	int	i;
-
-	i = 0;
-	while (buffer[i] != c && buffer[i] && i < size)
-		++i;
-	return ((buffer[i] && i < size) ? i : -1);
-}
-
-typedef struct s_fps
-{
-	int	p;
-	int	c;
-	int	f;
-	int	fps;
-}				t_fps;
-
-int	fx_fps()
-{
-	t_core	*e;
-	static	t_fps data = (t_fps){0, 0, 0, 0};
-	char		buff[SUPTIME + 1];
-	int			size;
-	int			fd;
-
-	if ((fd = open("/proc/uptime", O_RDONLY)) == -1)
-		return (-1);
-	size = (int)read(fd, buff, SUPTIME);
-	buff[size] = 0;
-	if ((size = ft_wischar(buff, '.', size)) != -1)
-		buff[size] = 0;
-	else
-		return (((close(fd)) == -1) ? -2 : -1);
-	data.p = data.c;
-	if ((data.c = ft_atoi(buff)) != data.p)
-	{
-		data.fps = data.f;
-		data.f = 0;
-	}
-	e = ft_core();
-	close(fd);
-	++data.f;
-	e->fps = data.fps;
-	return (0);
-}
-
-int	fx_initcore(char *title, int x, int y)
-{
-	t_core	*e;
-
-	e = (t_core*)fx_getcore();
-	if (!(e->mlx = mlx_init()))
-		return (-1);
-	if (!(e->win = mlx_new_window(e->mlx, x, y, title)))
-		return (-2);
-	e->fps = 0;
-	return (0);
-}
-*/
